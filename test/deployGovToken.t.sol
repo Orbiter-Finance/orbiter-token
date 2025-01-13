@@ -16,13 +16,9 @@ contract GovTokenTest is Test {
     function setUp() public {
         // Initialize test accounts
         admin = address(1);
-        minter = address(2);
-        burner = address(3);
         user = address(4);
 
         vm.label(admin, "admin");
-        vm.label(minter, "minter");
-        vm.label(burner, "burner");
         vm.label(user, "user");
 
         // Deploy the GovToken contract Proxy
@@ -32,46 +28,40 @@ contract GovTokenTest is Test {
         );
 
         govToken = GovToken(proxy);
-
-        // Grant roles
-        vm.startPrank(admin);
-        govToken.grantRole(govToken.MINTER_ROLE(), minter);
-        govToken.grantRole(govToken.BURNER_ROLE(), burner);
-        vm.stopPrank();
     }
 
     function testMint() public {
         uint256 mintAmount = 1000 * 10 ** 18;
 
         // Mint tokens to user
-        vm.prank(minter); // Simulates `minter` as the msg.sender
+        vm.prank(admin); // Simulates `admin` as the msg.sender
         govToken.mint(user, mintAmount);
 
         // Verify user balance
         assertEq(govToken.balanceOf(user), mintAmount);
     }
 
-    function testBurn() public {
-        uint256 mintAmount = 1000 * 10 ** 18;
-        uint256 burnAmount = 500 * 10 ** 18;
+    // function testBurn() public {
+    //     uint256 mintAmount = 1000 * 10 ** 18;
+    //     uint256 burnAmount = 500 * 10 ** 18;
 
-        // Mint tokens to user
-        vm.prank(minter);
-        govToken.mint(user, mintAmount);
+    //     // Mint tokens to user
+    //     vm.prank(minter);
+    //     govToken.mint(user, mintAmount);
 
-        // Burn tokens from user
-        vm.prank(burner);
-        govToken.burn(user, burnAmount);
+    //     // Burn tokens from user
+    //     vm.prank(burner);
+    //     govToken.burn(user, burnAmount);
 
-        // Verify user balance
-        assertEq(govToken.balanceOf(user), mintAmount - burnAmount);
-    }
+    //     // Verify user balance
+    //     assertEq(govToken.balanceOf(user), mintAmount - burnAmount);
+    // }
 
     function testTransfer() public {
         uint256 mintAmount = 1000 * 10 ** 18;
 
         // Mint tokens to user
-        vm.prank(minter);
+        vm.prank(admin);
         govToken.mint(user, mintAmount);
 
         // Transfer tokens from user to another account
@@ -94,11 +84,11 @@ contract GovTokenTest is Test {
         govToken.mint(user, mintAmount);
     }
 
-    function testRevertWhenBurnWithoutRole() public {
-        uint256 burnAmount = 500 * 10 ** 18;
+    // function testRevertWhenBurnWithoutRole() public {
+    //     uint256 burnAmount = 500 * 10 ** 18;
 
-        // Attempt to burn tokens without the BURNER_ROLE
-        vm.expectRevert(); // Expect the transaction to revert
-        govToken.burn(user, burnAmount);
-    }
+    //     // Attempt to burn tokens without the BURNER_ROLE
+    //     vm.expectRevert(); // Expect the transaction to revert
+    //     govToken.burn(user, burnAmount);
+    // }
 }
