@@ -16,9 +16,6 @@ contract GovToken is
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
 
-    string private constant NAME = "Orbiter";
-    string private constant SYMBOL = "ORB";
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -27,11 +24,14 @@ contract GovToken is
     /**
      * @dev Initialize function (replaces constructor for upgradeable contracts).
      */
-    function initialize(address admin) public initializer {
-        __ERC20_init(NAME, SYMBOL);
-        __EIP712_init(NAME, "1");
-        __ERC20Permit_init(NAME);
-        // __UUPSUpgradeable_init();
+    function initialize(
+        string memory name,
+        string memory symbol,
+        address admin
+    ) public initializer {
+        __ERC20_init(name, symbol);
+        __EIP712_init(name, "1");
+        __ERC20Permit_init(name);
         __AccessControl_init();
 
         if (admin == address(0)) {
