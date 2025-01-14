@@ -1,4 +1,4 @@
-import { ethers, upgrades } from "hardhat";
+import { BigNumber, providers, Wallet, Contract } from "ethers";
 import { expect } from "chai";
 import {
   getArbitrumNetwork,
@@ -8,81 +8,48 @@ import {
 
 import { arbLog } from "arb-shared-dependencies";
 
-import { toBigNumber, toV5Provider, toV5Wallet } from "./warpEthers";
+import OrbiterToken from "../out/OrbiterToken.sol/OrbiterToken.json";
+
+const OrbiterTokenAddress = require("../script/config/address.json");
+
+import * as dotenv from "dotenv";
+dotenv.config();
 
 /**
  * Set up: instantiate wallets connected to providers
  */
-const walletPrivateKey = process.env.PRIVATE_KEY as string;
+const walletPrivateKey = process.env.PRIVATE_KEY
 
-const parentChainProvider = toV5Provider(
-  process.env.ETHEREUM_SEPOLIA_RPC_URL as string
+const parentChainProvider = new providers.JsonRpcProvider(
+  process.env.ETHEREUM_SEPOLIA_RPC_URL
 );
-const childChainProvider = toV5Provider(
-  process.env.ARBITRUM_SEPOLIA_RPC_URL as string
+const childChainProvider = new providers.JsonRpcProvider(
+  process.env.ARBITRUM_SEPOLIA_RPC_URL
 );
 
-const parentChainWallet = toV5Wallet(walletPrivateKey, parentChainProvider);
-const childChainWallet = toV5Wallet(walletPrivateKey, childChainProvider);
-
-const tokenTotalSupply = BigInt(100000);
+const parentChainWallet = new Wallet(walletPrivateKey, parentChainProvider);
+const childChainWallet = new Wallet(walletPrivateKey, childChainProvider);
 
 /**
  * Set the amount of token to be transferred to the child chain
  */
-const tokenAmount = BigInt(50);
+const tokenAmount = BigNumber.from(50);
 
 const main = async () => {
   await arbLog("Deposit token using Arbitrum SDK");
 
-  /**
-   * Add the custom network configuration to the SDK if present
-   */
-  //   addCustomNetworkFromFile();
-
-  /**
-   * For the purpose of our tests, here we deploy an standard ERC-20 token (DappToken) to the parent chain
-   * It sends its deployer (us) the initial supply of 1000
-   */
-  console.log("Deploying the test DappToken to the parent chain:");
-  const dappToken = await ethers.getContractAt(
-    "GovToken",
-    "0x76B4e27420af7417eC7b2cB0C803bc6174DEEE35",
+  console.log("Deploying the OrbiterToken to the Ethereum chain:");
+  const ethereumOrbiterToken = new Contract(
+    OrbiterTokenAddress.EthereumOrbiterToken,
+    OrbiterToken.abi,
     parentChainWallet
   );
 
-  // Todo: Currently, contracts cannot be deployed. Contracts can only be deployed through foundry.
-  // The problem is unknown.
-  //   const DappToken = (await ethers.getContractFactory("GovToken")).connect(
-  //     parentChainWallet
-  //   );
-  //   const dappToken = await upgrades.deployProxy(
-  //     DappToken,
-  //     ["Orbiter", "Orb", "0xb2c87A026Bfa7136B36ca7C0027f64328021D721"],
-  //     {
-  //       initializer: "initialize",
-  //       kind: "uups",
-  //       //   txOverrides: { maxFeePerGas: 100000000000 },
-  //     }
-  //   );
-  //   await dappToken.waitForDeployment();
-  //   console.log("Proxy contract:", dappToken.target);
-  //   const implAddress = await upgrades.erc1967.getImplementationAddress(
-  //     await dappToken.getAddress()
-  //   );
-  //   console.log("Implementation contract:", implAddress);
   console.log(
-    `DappToken is deployed to the parent chain at ${await dappToken.getAddress()}`
+    `EthereumOrbiterToken is deployed to the Ethereum chain at ${await ethereumOrbiterToken.getAddress()}`
   );
 
-  //   console.log("Mint Token");
-  const tokenDecimals = await dappToken.decimals();
-  //   await dappToken.mint(
-  //     "0xb2c87A026Bfa7136B36ca7C0027f64328021D721",
-  //     tokenTotalSupply * BigInt(10) ** tokenDecimals
-  //   );
-
-  //   console.log("Mint Token Successfully");
+  const tokenDecimals = await ethereumOrbiterToken.decimals();
 
   /**
    * Use childChainNetwork to create an Arbitrum SDK Erc20Bridger instance
@@ -96,19 +63,21 @@ const main = async () => {
    * We get the address of the parent-chain gateway for our DappToken,
    * which will later help us get the initial token balance of the bridge (before deposit)
    */
-  const tokenAddress = await dappToken.getAddress();
+  const tokenAddress = await ethereumOrbiterToken.getAddress();
   const expectedGatewayAddress = await erc20Bridger.getParentGatewayAddress(
     tokenAddress,
     parentChainProvider
   );
-  const initialBridgeTokenBalance = await dappToken.balanceOf(
+  const initialBridgeTokenBalance = await ethereumOrbiterToken.balanceOf(
     expectedGatewayAddress
   );
 
   /**
    * Because the token might have decimals, we update the amount to deposit taking into account those decimals
    */
-  const tokenDepositAmount = tokenAmount * BigInt(10) ** tokenDecimals;
+  const tokenDepositAmount = tokenAmount.mul(
+    BigNumber.from(10).pow(BigNumber.from(tokenDecimals))
+  );
 
   /**
    * The StandardGateway contract will ultimately be making the token transfer call; thus, that's the contract we need to approve.
@@ -142,9 +111,9 @@ const main = async () => {
    * (3) parentSigner: address of the account on the parent chain transferring tokens to the child chain
    * (4) childProvider: A provider for the child chain
    */
-  console.log("Transferring DappToken to the child chain:");
+  console.log("Transferring EthereumOrbiterToken to the child chain:");
   const depositTransaction = await erc20Bridger.deposit({
-    amount: toBigNumber(tokenDepositAmount),
+    amount: tokenDepositAmount,
     erc20ParentAddress: tokenAddress,
     parentSigner: parentChainWallet,
     childProvider: childChainProvider,
@@ -167,14 +136,12 @@ const main = async () => {
    */
   if (childTransactionReceipt.complete) {
     console.log(
-      `Message was successfully executed on the child chain: status: ${
-        ParentToChildMessageStatus[childTransactionReceipt.status]
+      `Message was successfully executed on the child chain: status: ${ParentToChildMessageStatus[childTransactionReceipt.status]
       }`
     );
   } else {
     throw new Error(
-      `Message failed to be executed on the child chain: status ${
-        ParentToChildMessageStatus[childTransactionReceipt.status]
+      `Message failed to be executed on the child chain: status ${ParentToChildMessageStatus[childTransactionReceipt.status]
       }`
     );
   }
@@ -182,7 +149,7 @@ const main = async () => {
   /**
    * Get the Bridge token balance
    */
-  const finalBridgeTokenBalance = await dappToken.balanceOf(
+  const finalBridgeTokenBalance = await ethereumOrbiterToken.balanceOf(
     expectedGatewayAddress
   );
 

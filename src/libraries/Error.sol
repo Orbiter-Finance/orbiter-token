@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 error InvalidAddr();
 error InvalidAmount();
+error ReachedMaximumSupplyLimit();
 error InvalidData();
 
 error InsufficientBalance();

@@ -1,0 +1,15 @@
+{
+  "Owner": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
+  "EthereumOrbiterToken": {
+    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
+    "amount": "0x12"
+  },
+  "ArbitrumOrbiterToken": {
+    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
+    "amount": ""
+  },
+  "BaseOrbiterToken": {
+    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
+    "amount": ""
+  }
+}

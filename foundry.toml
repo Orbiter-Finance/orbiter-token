@@ -14,7 +14,7 @@ out = 'out'
 solc = "0.8.26"
 src = 'src'
 fs_permissions = [
-    { access = "read", path = "./script/setup/" },
+    { access = "read-write", path = "./config/" },
     { access = "read", path = "./out/" },
 ]
 

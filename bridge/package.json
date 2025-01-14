@@ -1,0 +1,21 @@
+{
+  "name": "bridge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "ethers": "^5.7.1"
+  },
+  "dependencies": {
+    "@arbitrum/sdk": "^4.0.2",
+    "@eth-optimism/sdk": "^3.3.3",
+    "arb-shared-dependencies": "^1.0.0",
+    "hardhat-preprocessor": "^0.1.5"
+  }
+}

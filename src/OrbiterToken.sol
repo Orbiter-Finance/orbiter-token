@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {InvalidAddr} from "src/libraries/Error.sol";
+import {InvalidAddr, ReachedMaximumSupplyLimit} from "src/libraries/Error.sol";
 import {ERC20PermitUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-contract GovToken is
+contract OrbiterToken is
     Initializable,
     ERC20PermitUpgradeable,
     AccessControlUpgradeable,
@@ -15,6 +15,8 @@ contract GovToken is
 {
     // bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     // bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+
+    uint256 public MAX_SUPPLY_AMOUNT;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -27,6 +29,7 @@ contract GovToken is
     function initialize(
         string memory name,
         string memory symbol,
+        uint256 max_supply_amount,
         address admin
     ) public initializer {
         __ERC20_init(name, symbol);
@@ -38,6 +41,8 @@ contract GovToken is
         if (admin == address(0)) {
             revert InvalidAddr();
         }
+
+        MAX_SUPPLY_AMOUNT = max_supply_amount;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
     }
@@ -52,6 +57,9 @@ contract GovToken is
         address _account,
         uint256 _amount
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (totalSupply() + _amount > MAX_SUPPLY_AMOUNT) {
+            revert ReachedMaximumSupplyLimit();
+        }
         _mint(_account, _amount);
     }
 

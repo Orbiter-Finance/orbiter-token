@@ -2,16 +2,18 @@
 pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
-import "../src/GovToken.sol";
+import "../src/OrbiterToken.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract GovTokenTest is Test {
     address public proxy;
-    GovToken public govToken;
+    OrbiterToken public token;
     address public admin;
     address public minter;
     address public burner;
     address public user;
+
+    uint256 max_supply = 1000000 * 10 ** 18;
 
     function setUp() public {
         // Initialize test accounts
@@ -23,11 +25,14 @@ contract GovTokenTest is Test {
 
         // Deploy the GovToken contract Proxy
         proxy = Upgrades.deployUUPSProxy(
-            "GovToken.sol",
-            abi.encodeCall(GovToken.initialize, ("Orbiter", "ORB", admin))
+            "OrbiterToken.sol",
+            abi.encodeCall(
+                OrbiterToken.initialize,
+                ("OrbiterToken", "ORT", max_supply, admin)
+            )
         );
 
-        govToken = GovToken(proxy);
+        token = OrbiterToken(proxy);
     }
 
     function testMint() public {
@@ -35,10 +40,10 @@ contract GovTokenTest is Test {
 
         // Mint tokens to user
         vm.prank(admin); // Simulates `admin` as the msg.sender
-        govToken.mint(user, mintAmount);
+        token.mint(user, mintAmount);
 
         // Verify user balance
-        assertEq(govToken.balanceOf(user), mintAmount);
+        assertEq(token.balanceOf(user), mintAmount);
     }
 
     // function testBurn() public {
@@ -47,14 +52,14 @@ contract GovTokenTest is Test {
 
     //     // Mint tokens to user
     //     vm.prank(minter);
-    //     govToken.mint(user, mintAmount);
+    //     token.mint(user, mintAmount);
 
     //     // Burn tokens from user
     //     vm.prank(burner);
-    //     govToken.burn(user, burnAmount);
+    //     token.burn(user, burnAmount);
 
     //     // Verify user balance
-    //     assertEq(govToken.balanceOf(user), mintAmount - burnAmount);
+    //     assertEq(token.balanceOf(user), mintAmount - burnAmount);
     // }
 
     function testTransfer() public {
@@ -62,18 +67,18 @@ contract GovTokenTest is Test {
 
         // Mint tokens to user
         vm.prank(admin);
-        govToken.mint(user, mintAmount);
+        token.mint(user, mintAmount);
 
         // Transfer tokens from user to another account
         address recipient = address(5);
         uint256 transferAmount = 400 * 10 ** 18;
 
         vm.prank(user); // Simulates `user` as the msg.sender
-        govToken.transfer(recipient, transferAmount);
+        token.transfer(recipient, transferAmount);
 
         // Verify balances
-        assertEq(govToken.balanceOf(user), mintAmount - transferAmount);
-        assertEq(govToken.balanceOf(recipient), transferAmount);
+        assertEq(token.balanceOf(user), mintAmount - transferAmount);
+        assertEq(token.balanceOf(recipient), transferAmount);
     }
 
     function testRevertWhenMintWithoutRole() public {
@@ -81,7 +86,7 @@ contract GovTokenTest is Test {
 
         // Attempt to mint tokens without the MINTER_ROLE
         vm.expectRevert(); // Expect the transaction to revert
-        govToken.mint(user, mintAmount);
+        token.mint(user, mintAmount);
     }
 
     // function testRevertWhenBurnWithoutRole() public {
@@ -89,6 +94,6 @@ contract GovTokenTest is Test {
 
     //     // Attempt to burn tokens without the BURNER_ROLE
     //     vm.expectRevert(); // Expect the transaction to revert
-    //     govToken.burn(user, burnAmount);
+    //     token.burn(user, burnAmount);
     // }
 }
