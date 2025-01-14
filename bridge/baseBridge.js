@@ -279,10 +279,10 @@ const abi = [
 const walletPrivateKey = process.env.PRIVATE_KEY;
 
 const parentChainProvider = new providers.JsonRpcProvider(
-  process.env.ETHEREUM_SEPOLIA_RPC_URL
+  process.env.ETHEREUM_RPC_URL
 );
 const childChainProvider = new providers.JsonRpcProvider(
-  process.env.BASE_SEPOLIA_RPC_URL
+  process.env.BASE_RPC_URL
 );
 
 const parentChainWallet = new Wallet(walletPrivateKey, parentChainProvider);

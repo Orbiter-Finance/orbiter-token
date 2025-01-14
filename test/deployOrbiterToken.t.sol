@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import "forge-std/Test.sol";
 import "../src/OrbiterToken.sol";
+import "./mockUpgrade/OrbiterTokenV101.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
 contract OrbiterTokenTest is Test {
@@ -89,5 +90,9 @@ contract OrbiterTokenTest is Test {
         vm.expectRevert(); // Expect the transaction to revert
         vm.prank(admin);
         token.transferOwnership(user);
+    }
+
+    function testTokenUpgrade() public {
+        Upgrades.upgradeProxy(proxy, "OrbiterTokenV101.sol", "", admin);
     }
 }

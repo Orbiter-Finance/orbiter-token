@@ -1,14 +1,18 @@
-const { BigNumber, providers, Wallet, Contract } = require("ethers");
+const fs = require("fs");
+const path = require("path");
 const { expect } = require("chai");
+
 const {
   getArbitrumNetwork,
   ParentToChildMessageStatus,
   Erc20Bridger,
 } = require("@arbitrum/sdk");
 const { arbLog } = require("arb-shared-dependencies");
-
+const { BigNumber, providers, Wallet, Contract } = require("ethers");
+const OrbiterTokenNetworkPath = path.join(__dirname, "../config/tokenNetwork.json");
+const OrbiterTokenNetwork = require(OrbiterTokenNetworkPath);
 const OrbiterToken = require("../out/OrbiterToken.sol/OrbiterToken.json");
-const OrbiterTokenNetwork = require("../config/tokenNetwork.json");
+
 
 require('dotenv').config();
 
@@ -18,10 +22,10 @@ require('dotenv').config();
 const walletPrivateKey = process.env.PRIVATE_KEY
 
 const parentChainProvider = new providers.JsonRpcProvider(
-  process.env.ETHEREUM_SEPOLIA_RPC_URL
+  process.env.ETHEREUM_RPC_URL
 );
 const childChainProvider = new providers.JsonRpcProvider(
-  process.env.ARBITRUM_SEPOLIA_RPC_URL
+  process.env.ARBITRUM_RPC_URL
 );
 
 const parentChainWallet = new Wallet(walletPrivateKey, parentChainProvider);
@@ -186,6 +190,31 @@ const main = async () => {
   console.log(
     `ArbitrumOrbiterToken is deployed to the Arbitrum chain at ${childChainTokenAddress}`
   );
+
+
+
+  {
+    let OrbiterTokenNetwork;
+    console.log("OrbiterTokenNetwork", OrbiterTokenNetwork);
+    try {
+      const rawData = fs.readFileSync(OrbiterTokenNetworkPath, "utf8");
+      OrbiterTokenNetwork = JSON.parse(rawData);
+
+    } catch (error) {
+      console.error("Error reading JSON file:", error);
+      process.exit(1);
+    }
+
+    OrbiterTokenNetwork.ArbitrumOrbiterToken.address = childChainTokenAddress;
+    fs.writeFileSync(OrbiterTokenNetworkPath, JSON.stringify(OrbiterTokenNetwork, null, 2), "utf8", (err) => {
+      if (err) {
+        console.error("Error writing to JSON file:", err);
+      } else {
+        console.log("JSON file updated successfully!");
+      }
+    });
+  }
+
 
   // Todo:Consider whether direct transfer is required.
   //   {

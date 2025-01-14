@@ -54,9 +54,9 @@ OPTIMISM_MINTABLE_ERC20FACTORY="0x4200000000000000000000000000000000000012"
 #### 1.3 config bridge .env
 ```
 PRIVATE_KEY="Token's owner private key"
-ETHEREUM_SEPOLIA_RPC_URL=""
-ARBITRUM_SEPOLIA_RPC_URL=""
-BASE_SEPOLIA_RPC_URL=""
+ETHEREUM_RPC_URL=""
+ARBITRUM_RPC_URL=""
+BASE_RPC_URL=""
 ```
 
 ### Deploy
@@ -75,6 +75,6 @@ make deployLockedTokenGov
 
 ```shell
 cd bridge
-node arbitrumBridge.js
-node baseBridge.js
+npm run arbitrum
+npm run base
 ```

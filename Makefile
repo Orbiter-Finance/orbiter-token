@@ -9,3 +9,7 @@ deployLockedTokenGov:
 
 mintOrbiterToken:
 	bash script/deploy/mint_OrbiterToken.sh
+
+# upgrade
+upgradeOrbiterToken:
+	bash script/upgrade/upgrade_OrbiterToken.sh
