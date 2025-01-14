@@ -1,66 +1,80 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
 
 ## Usage
 
-### Build
+### 1. Config 
+#### 1.1 config jsons
 
-```shell
-$ forge build
+config/lockedTokenGov.json
+```json
+{
+  "address": "Do not fill",
+  "admin": "0xb2c87A026Bfa7136B36ca7C0027f64328021D721"
+}
+
+```
+config/tokenInit.json
+```json
+{
+  "name": "Orbiter Token",
+  "symbol": "OBT",
+  "admin": "0xb2c87A026Bfa7136B36ca7C0027f64328021D721",
+  "supply": "0x186a0"// supply * 10 ** 18
+}
+
+```
+config/tokenNetwork.json
+```json
+{
+  "Owner": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",// Token‘s owner address
+  "EthereumOrbiterToken": {
+    "address": "Do not fill",
+    "amount": "0x3e8" //The amount of tokens to be minted on the Ethererum (amount * 10 ** 18)
+  },
+  "ArbitrumOrbiterToken": {
+    "address": "Do not fill",
+    "amount": "0x32" // The number of tokens that will be bridged to the Arbitrum (amount * 10 ** 18)
+  },
+  "BaseOrbiterToken": {
+    "address": "Do not fill",
+    "amount": "0x32" // The number of tokens that will be bridged to the Base (amount * 10 ** 18)
+  }
+}
 ```
 
-### Test
-
-```shell
-$ forge test
+#### 1.2 config contract .env
+```
+PRIVATE_KEY="deployer private key"
+ADMIN_PRIVATE_KEY="Token's admin private key(Used to mint tokens)"
+ETHEREUM_SEPOLIA_RPC_URL=""
+ARBITRUM_SEPOLIA_RPC_URL=""
+BASE_SEPOLIA_RPC_URL=""
+OPTIMISM_MINTABLE_ERC20FACTORY="0x4200000000000000000000000000000000000012"
 ```
 
-### Format
-
-```shell
-$ forge fmt
+#### 1.3 config bridge .env
 ```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+PRIVATE_KEY="Token's owner private key"
+ETHEREUM_SEPOLIA_RPC_URL=""
+ARBITRUM_SEPOLIA_RPC_URL=""
+BASE_SEPOLIA_RPC_URL=""
 ```
 
 ### Deploy
 
 ```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+# core
+make deployOrbiterToken
+make deployOpERC20Token
+make mintOrbiterToken
+
+# gov
+make deployLockedTokenGov
 ```
 
-### Cast
+### Bridge
 
 ```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+cd bridge
+node arbitrumBridge.js
+node baseBridge.js
 ```

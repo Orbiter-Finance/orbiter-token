@@ -1,15 +1,15 @@
 {
   "Owner": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
   "EthereumOrbiterToken": {
-    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
-    "amount": "0x12"
+    "address": "0xe779be20437f86ca4493b96496611cd5a5c74965",
+    "amount": "0x3e8"
   },
   "ArbitrumOrbiterToken": {
-    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
-    "amount": ""
+    "address": "",
+    "amount": "0x32"
   },
   "BaseOrbiterToken": {
-    "address": "0xb2c87a026bfa7136b36ca7c0027f64328021d721",
-    "amount": ""
+    "address": "0x243ff126ddd1e41b63f25eef65c4b7b79df5567b",
+    "amount": "0x32"
   }
 }

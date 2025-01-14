@@ -5,32 +5,37 @@ import "forge-std/Test.sol";
 import "../src/OrbiterToken.sol";
 import {Upgrades} from "openzeppelin-foundry-upgrades/Upgrades.sol";
 
-contract GovTokenTest is Test {
+contract OrbiterTokenTest is Test {
     address public proxy;
     OrbiterToken public token;
+
+    address public deployer;
     address public admin;
-    address public minter;
-    address public burner;
     address public user;
 
     uint256 max_supply = 1000000 * 10 ** 18;
 
     function setUp() public {
         // Initialize test accounts
-        admin = address(1);
+        deployer = address(1);
+        admin = address(2);
         user = address(4);
 
         vm.label(admin, "admin");
         vm.label(user, "user");
 
-        // Deploy the GovToken contract Proxy
+        vm.startPrank(deployer);
+
+        // Deploy the Orbiter contract Proxy
         proxy = Upgrades.deployUUPSProxy(
             "OrbiterToken.sol",
             abi.encodeCall(
                 OrbiterToken.initialize,
-                ("OrbiterToken", "ORT", max_supply, admin)
+                ("Orbiter Token", "OBT", max_supply, admin)
             )
         );
+
+        vm.stopPrank();
 
         token = OrbiterToken(proxy);
     }
@@ -45,22 +50,6 @@ contract GovTokenTest is Test {
         // Verify user balance
         assertEq(token.balanceOf(user), mintAmount);
     }
-
-    // function testBurn() public {
-    //     uint256 mintAmount = 1000 * 10 ** 18;
-    //     uint256 burnAmount = 500 * 10 ** 18;
-
-    //     // Mint tokens to user
-    //     vm.prank(minter);
-    //     token.mint(user, mintAmount);
-
-    //     // Burn tokens from user
-    //     vm.prank(burner);
-    //     token.burn(user, burnAmount);
-
-    //     // Verify user balance
-    //     assertEq(token.balanceOf(user), mintAmount - burnAmount);
-    // }
 
     function testTransfer() public {
         uint256 mintAmount = 1000 * 10 ** 18;
@@ -89,11 +78,16 @@ contract GovTokenTest is Test {
         token.mint(user, mintAmount);
     }
 
-    // function testRevertWhenBurnWithoutRole() public {
-    //     uint256 burnAmount = 500 * 10 ** 18;
+    function testRevertWhenUpgradeWithoutRole() public {
+        vm.expectRevert(); // Expect the transaction to revert
+        vm.prank(deployer);
+        token.transferOwnership(user);
 
-    //     // Attempt to burn tokens without the BURNER_ROLE
-    //     vm.expectRevert(); // Expect the transaction to revert
-    //     token.burn(user, burnAmount);
-    // }
+        vm.prank(admin);
+        token.transferOwnership(user);
+
+        vm.expectRevert(); // Expect the transaction to revert
+        vm.prank(admin);
+        token.transferOwnership(user);
+    }
 }

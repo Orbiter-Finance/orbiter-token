@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 contract JsonHelper is Script {
     string public constant TokenInitPath = "/config/tokenInit.json";
     string public constant TokenNetworkPath = "/config/tokenNetwork.json";
+    string public constant LockedTokenGovPath = "/config/lockedTokenGov.json";
 
     struct TokenInitInfo {
         string name;
@@ -92,6 +93,27 @@ contract JsonHelper is Script {
             filePath,
             string(abi.encodePacked(".", network, ".", "address"))
         );
+    }
+
+    function readLockedTokenGovAdmin() public returns (address) {
+        string memory root = vm.projectRoot();
+        string memory filePath = string.concat(root, LockedTokenGovPath);
+
+        string memory jsonContent = vm.readFile(filePath);
+
+        return
+            vm.parseJsonAddress(
+                jsonContent,
+                string(abi.encodePacked(".", "admin"))
+            );
+    }
+
+    function writeLockedTokenGovAddress(address addr) public {
+        string memory root = vm.projectRoot();
+        string memory filePath = string.concat(root, LockedTokenGovPath);
+
+        string memory value = addressToString(addr);
+        vm.writeJson(value, filePath, string(abi.encodePacked(".", "address")));
     }
 
     function addressToString(

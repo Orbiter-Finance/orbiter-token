@@ -1,12 +1,11 @@
 const optimism = require("@eth-optimism/sdk")
 const { expect } = require("chai");
-
 const { arbLog } = require("arb-shared-dependencies");
 const { BigNumber, Contract, providers, Wallet } = require("ethers");
 
 const OrbiterToken = require("../out/OrbiterToken.sol/OrbiterToken.json");
 
-const OrbiterTokenNetwork = require("../script/config/address.json");
+const OrbiterTokenNetwork = require("../config/tokenNetwork.json");
 
 require('dotenv').config();
 
@@ -292,35 +291,35 @@ const childChainWallet = new Wallet(walletPrivateKey, childChainProvider);
 /**
  * Set the amount of token to be transferred to the child chain
  */
-const tokenAmount = BigNumber.from(50);
+const tokenAmount = BigNumber.from(OrbiterTokenNetwork.BaseOrbiterToken.amount);
 
 const main = async () => {
   await arbLog("Deposit token using Optimism SDK");
 
-  /**
-   * For the purpose of our tests, here we deploy an standard ERC-20 token (DappToken) to the parent chain
-   * It sends its deployer (us) the initial supply of 1000
-   */
-  console.log("Deploying the test DappToken to the parent chain:");
-
+  console.log("Deploying the OrbiterToken to the Ethereum chain:");
   const ethereumOrbiterToken = new Contract(
-    OrbiterTokenAddress.EthereumOrbiterToken,
+    OrbiterTokenNetwork.EthereumOrbiterToken.address,
     OrbiterToken.abi,
     parentChainWallet
   );
 
-  console.log(
-    `EthereumOrbiterToken is deployed to the Ethereum chain at ${await ethereumOrbiterToken.getAddress()}`
-  );
+  const ethereumOrbiterTokenAddress = ethereumOrbiterToken.address;
+  const baseOrbiterTokenAddress = OrbiterTokenNetwork.BaseOrbiterToken.address;
 
   console.log(
-    "before balance",
-    (await ethereumOrbiterToken.balanceOf(parentChainWallet.address)).toString()
+    `EthereumOrbiterToken is deployed to the Ethereum chain at ${ethereumOrbiterTokenAddress}`
   );
+
+  let currentBalance = await ethereumOrbiterToken.balanceOf(parentChainWallet.address);
+
+  const tokenDecimals = await ethereumOrbiterToken.decimals();
+
+  console.log(`Now you have ${currentBalance / (10 ** tokenDecimals)} OrbiterToken on the Ethereum chain.`);
+
 
   const messenger = new optimism.CrossChainMessenger({
-    l1ChainId: optimism.L1ChainID.SEPOLIA,
-    l2ChainId: optimism.L2ChainID.BASE_SEPOLIA,
+    l1ChainId: (await parentChainProvider.getNetwork()).chainId,
+    l2ChainId: (await childChainProvider.getNetwork()).chainId,
     l1SignerOrProvider: parentChainWallet,
     l2SignerOrProvider: childChainWallet,
   });
@@ -328,22 +327,29 @@ const main = async () => {
   /**
    * Because the token might have decimals, we update the amount to deposit taking into account those decimals
    */
-  const tokenDecimals = await ethereumOrbiterToken.decimals();
   const tokenDepositAmount = tokenAmount.mul(
     BigNumber.from(10).pow(BigNumber.from(tokenDecimals))
   );
 
+  console.log(`${tokenAmount} OrbiterTokens will be transferred to the Base chain shortly.`);
+
+  console.log("Approving:");
   const approveTransaction = await messenger.approveERC20(
-    ethereumOrbiterToken.address,
-    OrbiterTokenAddress.BaseOrbiterToken,
+    ethereumOrbiterTokenAddress,
+    baseOrbiterTokenAddress,
     tokenDepositAmount
   );
   await approveTransaction.wait();
 
+  console.log("Transferring EthereumOrbiterToken to the Base chain:");
   const depositTransaction = await messenger.depositERC20(
-    ethereumOrbiterToken.address,
-    OrbiterTokenAddress.BaseOrbiterToken,
+    ethereumOrbiterTokenAddress,
+    baseOrbiterTokenAddress,
     tokenDepositAmount
+  );
+
+  console.log(
+    `Deposit initiated: waiting for execution of the retryable ticket on the Base chain (takes 10-15 minutes; current time: ${new Date().toTimeString()}) `
   );
   await depositTransaction.wait();
 
@@ -352,18 +358,19 @@ const main = async () => {
     optimism.MessageStatus.RELAYED
   );
 
-  console.log(
-    "after balance",
-    (await ethereumOrbiterToken.balanceOf(parentChainWallet.address)).toString()
-  );
+  currentBalance = await ethereumOrbiterToken.balanceOf(parentChainWallet.address);
+
+  console.log(`Update:Now you have ${currentBalance / (10 ** tokenDecimals)} OrbiterToken on the Ethereum chain.`);
 
   const l2ERC20 = new Contract(
-    OrbiterTokenAddress.BaseOrbiterToken,
+    baseOrbiterTokenAddress,
     abi,
     childChainWallet
   );
 
-  console.log((await l2ERC20.balanceOf(childChainWallet.address)).toString());
+  const testWalletBalanceOnChildChain = await l2ERC20.balanceOf(childChainWallet.address);
+
+  console.log(`Now you have ${testWalletBalanceOnChildChain / (10 ** tokenDecimals)} OrbiterTokens on the Base chain`);
 };
 
 main()

@@ -24,7 +24,7 @@ contract MintOrbiterToken is JsonHelper {
 
         OrbiterToken token = OrbiterToken(tokenNetwork.addr);
 
-        token.mint(readTokenNetworkOwner(), tokenNetwork.amount);
+        token.mint(readTokenNetworkOwner(), tokenNetwork.amount * 10 ** 18);
 
         vm.stopBroadcast();
     }

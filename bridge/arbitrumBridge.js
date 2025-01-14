@@ -1,19 +1,16 @@
-import { BigNumber, providers, Wallet, Contract } from "ethers";
-import { expect } from "chai";
-import {
+const { BigNumber, providers, Wallet, Contract } = require("ethers");
+const { expect } = require("chai");
+const {
   getArbitrumNetwork,
   ParentToChildMessageStatus,
   Erc20Bridger,
-} from "@arbitrum/sdk";
+} = require("@arbitrum/sdk");
+const { arbLog } = require("arb-shared-dependencies");
 
-import { arbLog } from "arb-shared-dependencies";
+const OrbiterToken = require("../out/OrbiterToken.sol/OrbiterToken.json");
+const OrbiterTokenNetwork = require("../config/tokenNetwork.json");
 
-import OrbiterToken from "../out/OrbiterToken.sol/OrbiterToken.json";
-
-const OrbiterTokenAddress = require("../script/config/address.json");
-
-import * as dotenv from "dotenv";
-dotenv.config();
+require('dotenv').config();
 
 /**
  * Set up: instantiate wallets connected to providers
@@ -33,23 +30,29 @@ const childChainWallet = new Wallet(walletPrivateKey, childChainProvider);
 /**
  * Set the amount of token to be transferred to the child chain
  */
-const tokenAmount = BigNumber.from(50);
+const tokenAmount = BigNumber.from(OrbiterTokenNetwork.ArbitrumOrbiterToken.amount);
 
 const main = async () => {
   await arbLog("Deposit token using Arbitrum SDK");
 
   console.log("Deploying the OrbiterToken to the Ethereum chain:");
   const ethereumOrbiterToken = new Contract(
-    OrbiterTokenAddress.EthereumOrbiterToken,
+    OrbiterTokenNetwork.EthereumOrbiterToken.address,
     OrbiterToken.abi,
     parentChainWallet
   );
 
+  const ethereumOrbiterTokenAddress = ethereumOrbiterToken.address;
+
   console.log(
-    `EthereumOrbiterToken is deployed to the Ethereum chain at ${await ethereumOrbiterToken.getAddress()}`
+    `EthereumOrbiterToken is deployed to the Ethereum chain at ${ethereumOrbiterTokenAddress}`
   );
 
+  let currentBalance = await ethereumOrbiterToken.balanceOf(parentChainWallet.address);
+
   const tokenDecimals = await ethereumOrbiterToken.decimals();
+
+  console.log(`Now you have ${currentBalance / (10 ** tokenDecimals)} OrbiterToken on the Ethereum chain.`);
 
   /**
    * Use childChainNetwork to create an Arbitrum SDK Erc20Bridger instance
@@ -63,14 +66,17 @@ const main = async () => {
    * We get the address of the parent-chain gateway for our DappToken,
    * which will later help us get the initial token balance of the bridge (before deposit)
    */
-  const tokenAddress = await ethereumOrbiterToken.getAddress();
   const expectedGatewayAddress = await erc20Bridger.getParentGatewayAddress(
-    tokenAddress,
+    ethereumOrbiterTokenAddress,
     parentChainProvider
   );
+
+
   const initialBridgeTokenBalance = await ethereumOrbiterToken.balanceOf(
     expectedGatewayAddress
   );
+
+  console.log(`The Arbitrum Bridge already holds a balance of ${initialBridgeTokenBalance / (10 ** tokenDecimals)} OrbiterTokens prior to the transfer.`);
 
   /**
    * Because the token might have decimals, we update the amount to deposit taking into account those decimals
@@ -78,6 +84,8 @@ const main = async () => {
   const tokenDepositAmount = tokenAmount.mul(
     BigNumber.from(10).pow(BigNumber.from(tokenDecimals))
   );
+
+  console.log(`${tokenAmount} OrbiterTokens will be transferred to the Arbitrum chain shortly.`);
 
   /**
    * The StandardGateway contract will ultimately be making the token transfer call; thus, that's the contract we need to approve.
@@ -89,12 +97,12 @@ const main = async () => {
   console.log("Approving:");
   const approveTransaction = await erc20Bridger.approveToken({
     parentSigner: parentChainWallet,
-    erc20ParentAddress: tokenAddress,
+    erc20ParentAddress: ethereumOrbiterTokenAddress,
   });
 
   const approveTransactionReceipt = await approveTransaction.wait();
   console.log(
-    `You successfully allowed the Arbitrum Bridge to spend DappToken ${approveTransactionReceipt.transactionHash}`
+    `You successfully allowed the Arbitrum Bridge to spend OrbiterToken ${approveTransactionReceipt.transactionHash}`
   );
 
   /**
@@ -111,10 +119,10 @@ const main = async () => {
    * (3) parentSigner: address of the account on the parent chain transferring tokens to the child chain
    * (4) childProvider: A provider for the child chain
    */
-  console.log("Transferring EthereumOrbiterToken to the child chain:");
+  console.log("Transferring EthereumOrbiterToken to the Arbitrum chain:");
   const depositTransaction = await erc20Bridger.deposit({
     amount: tokenDepositAmount,
-    erc20ParentAddress: tokenAddress,
+    erc20ParentAddress: ethereumOrbiterTokenAddress,
     parentSigner: parentChainWallet,
     childProvider: childChainProvider,
   });
@@ -123,7 +131,7 @@ const main = async () => {
    * Now we wait for both the parent-chain and child-chain sides of transactions to be confirmed
    */
   console.log(
-    `Deposit initiated: waiting for execution of the retryable ticket on the child chain (takes 10-15 minutes; current time: ${new Date().toTimeString()}) `
+    `Deposit initiated: waiting for execution of the retryable ticket on the Arbitrum chain (takes 10-15 minutes; current time: ${new Date().toTimeString()}) `
   );
   const depositTransactionReceipt = await depositTransaction.wait();
   const childTransactionReceipt =
@@ -157,7 +165,8 @@ const main = async () => {
    * Check if Bridge balance has been updated correctly
    */
   expect(
-    initialBridgeTokenBalance + tokenDepositAmount == finalBridgeTokenBalance,
+    BigNumber.from(initialBridgeTokenBalance).add(tokenDepositAmount)
+      .eq(BigNumber.from(finalBridgeTokenBalance)),
     "Bridge balance was not updated after the token deposit transaction"
   ).to.be.true;
 
@@ -166,7 +175,7 @@ const main = async () => {
    * To do so, we use erc20Bridge to get the token address and contract on the child chain
    */
   const childChainTokenAddress = await erc20Bridger.getChildErc20Address(
-    tokenAddress,
+    ethereumOrbiterTokenAddress,
     parentChainProvider
   );
   const childChainToken = erc20Bridger.getChildTokenContract(
@@ -174,16 +183,28 @@ const main = async () => {
     childChainTokenAddress
   );
 
+  console.log(
+    `ArbitrumOrbiterToken is deployed to the Arbitrum chain at ${childChainTokenAddress}`
+  );
+
   // Todo:Consider whether direct transfer is required.
   //   {
   //     childChainToken.functions.transfer(airdopAddress, tokenDepositAmount);
   //   }
 
+  currentBalance = await ethereumOrbiterToken.balanceOf(parentChainWallet.address);
+
+  console.log(`Update:Now you have ${currentBalance / (10 ** tokenDecimals)} OrbiterToken on the Ethereum chain.`);
+
+
   const testWalletBalanceOnChildChain = (
     await childChainToken.functions.balanceOf(childChainWallet.address)
   )[0];
+
+  console.log(`Now you have ${testWalletBalanceOnChildChain / (10 ** tokenDecimals)} OrbiterTokens on the Arbitrum chain.`);
+
   expect(
-    testWalletBalanceOnChildChain.eq(tokenDepositAmount),
+    BigNumber.from(testWalletBalanceOnChildChain).eq(BigNumber.from(finalBridgeTokenBalance)),
     "wallet balance on the child chain was not updated after deposit"
   ).to.be.true;
 };
