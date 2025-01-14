@@ -195,7 +195,6 @@ const main = async () => {
 
   {
     let OrbiterTokenNetwork;
-    console.log("OrbiterTokenNetwork", OrbiterTokenNetwork);
     try {
       const rawData = fs.readFileSync(OrbiterTokenNetworkPath, "utf8");
       OrbiterTokenNetwork = JSON.parse(rawData);
