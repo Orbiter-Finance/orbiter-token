@@ -102,6 +102,7 @@ const main = async () => {
   const approveTransaction = await erc20Bridger.approveToken({
     parentSigner: parentChainWallet,
     erc20ParentAddress: ethereumOrbiterTokenAddress,
+    amount: tokenDepositAmount
   });
 
   const approveTransactionReceipt = await approveTransaction.wait();
