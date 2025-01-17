@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ReachedGrantAmountLimit, InvalidAmount} from "src/libraries/Error.sol";
+import {ReachedGrantAmountLimit, InvalidAmount, TransferFailed} from "src/libraries/Error.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -96,7 +96,10 @@ contract LockedTokenGrant is
         }
 
         releasedTokens += requestedAmount;
-        token.transfer(recipient, requestedAmount);
+
+        if (!token.transfer(recipient, requestedAmount)) {
+            revert TransferFailed();
+        }
         emit TokensSentToRecipient(
             recipient,
             address(this),
